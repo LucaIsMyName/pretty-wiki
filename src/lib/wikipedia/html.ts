@@ -42,6 +42,16 @@ export function transformArticleHtml(
     rewriteAnchor(anchor, lang, pageTitle, externalPrefixes)
   })
 
+  stripCenteredTableText(root)
+  stripBulletCharacters(root)
+  removeWhitespaceSpans(root)
+  flattenTableCellBreaks(root)
+  cleanInfoboxPresentation(root)
+  galleryInfoboxPhotos(root)
+  groupArticleLead(root)
+  markSectionFigures(root)
+  stripInlineStyles(root)
+
   root.querySelectorAll("img, audio, video, source").forEach((element) => {
     for (const attribute of ["src", "poster"]) {
       const value = element.getAttribute(attribute)
@@ -61,6 +71,7 @@ export function transformArticleHtml(
   const html = DOMPurify.sanitize(root.innerHTML, {
     ADD_ATTR: ["target", "rel", "controls"],
     ALLOW_DATA_ATTR: false,
+    FORBID_ATTR: ["style"],
     FORBID_TAGS: ["script", "style", "link"],
   })
 
@@ -178,4 +189,205 @@ function safePathDecode(value: string) {
 function isExternalTitle(title: string, prefixes: string[]) {
   const key = titleKey(title).toLowerCase()
   return prefixes.some((prefix) => key.startsWith(`${prefix.toLowerCase()}:`))
+}
+
+function stripCenteredTableText(root: HTMLElement) {
+  root.querySelectorAll("table, table *").forEach((node) => {
+    if (!(node instanceof HTMLElement)) return
+    if (node.getAttribute("align")?.toLowerCase() === "center") {
+      node.removeAttribute("align")
+    }
+  })
+}
+
+function stripInlineStyles(root: HTMLElement) {
+  root.removeAttribute("style")
+  root.querySelectorAll("[style]").forEach((node) => {
+    node.removeAttribute("style")
+  })
+}
+
+function stripBulletCharacters(root: HTMLElement) {
+  const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let node = walker.nextNode()
+  while (node) {
+    const text = node as Text
+    if (text.data.includes("•")) {
+      text.data = text.data.replaceAll("•", "").replace(/[ \t]{2,}/g, " ")
+    }
+    node = walker.nextNode()
+  }
+}
+
+function removeWhitespaceSpans(root: HTMLElement) {
+  const spans = [...root.querySelectorAll("span")]
+  for (const span of spans) {
+    if (span.querySelector("img, svg, audio, video, math, picture")) continue
+    if ((span.textContent ?? "").replace(/[\s\u00a0]/g, "") !== "") continue
+    const parent = span.parentNode
+    if (!parent) continue
+    const previous = span.previousSibling
+    const next = span.nextSibling
+    const betweenText =
+      (previous?.nodeType === Node.TEXT_NODE || previous instanceof HTMLElement) &&
+      (next?.nodeType === Node.TEXT_NODE || next instanceof HTMLElement)
+    parent.replaceChild(
+      span.ownerDocument.createTextNode(betweenText ? " " : ""),
+      span,
+    )
+  }
+}
+
+function galleryInfoboxPhotos(root: HTMLElement) {
+  root.querySelectorAll("table.infobox").forEach((infobox) => {
+    const body = infobox.querySelector(":scope > tbody") ?? infobox
+    const rows = [...body.children].filter(
+      (row): row is HTMLTableRowElement => row instanceof HTMLTableRowElement,
+    )
+    const photoRow = rows.find(
+      (row) => isInfoboxPhotoRow(row) && row.querySelectorAll("img").length > 0,
+    )
+    if (!photoRow) return
+
+    const document = infobox.ownerDocument
+    const gallery = document.createElement("div")
+    gallery.className = "wiki-infobox-gallery"
+    const cell = photoRow.cells[0]
+    if (!cell) return
+    for (const image of [...cell.querySelectorAll("img")]) {
+      if (image.closest(".wiki-infobox-photo")) continue
+      gallery.appendChild(photoFromImage(image, cell, document))
+    }
+    if (gallery.childElementCount === 0) return
+
+    const holder = document.createElement("tr")
+    holder.className = "infobox-image"
+    const holderCell = document.createElement("td")
+    holderCell.colSpan = 2
+    holderCell.appendChild(gallery)
+    holder.appendChild(holderCell)
+    body.insertBefore(holder, photoRow)
+    photoRow.remove()
+  })
+}
+
+function photoFromImage(
+  image: HTMLImageElement,
+  cell: HTMLElement,
+  document: Document,
+) {
+  const photo = document.createElement("figure")
+  photo.className = "wiki-infobox-photo"
+  let block: HTMLElement = image.closest("a") ?? image
+  while (
+    block.parentElement &&
+    block.parentElement !== cell &&
+    block.parentElement.querySelectorAll("img").length === 1
+  ) {
+    block = block.parentElement
+  }
+  const caption = block.nextElementSibling
+  photo.appendChild(block)
+  if (
+    caption instanceof HTMLElement &&
+    (caption.classList.contains("infobox-caption") || caption.tagName === "FIGCAPTION")
+  ) {
+    photo.appendChild(caption)
+  }
+  return photo
+}
+
+function isInfoboxPhotoRow(row: Element): row is HTMLTableRowElement {
+  if (!(row instanceof HTMLTableRowElement)) return false
+  const cell = row.cells.length === 1 ? row.cells[0] : null
+  if (!cell?.querySelector("img")) return false
+  if (row.querySelector("th")) return false
+  return (
+    row.classList.contains("infobox-image") ||
+    cell.classList.contains("infobox-image") ||
+    cell.classList.contains("infobox-full-data")
+  )
+}
+
+function groupArticleLead(root: HTMLElement) {
+  const firstHeading = root.querySelector("h2, h3")
+  if (!(firstHeading instanceof HTMLElement) || !firstHeading.parentElement) return
+
+  const leadNodes: ChildNode[] = []
+  const headingParent = firstHeading.parentElement
+
+  if (headingParent === root) {
+    let node = root.firstChild
+    while (node && node !== firstHeading) {
+      leadNodes.push(node)
+      node = node.nextSibling
+    }
+  } else {
+    let container: HTMLElement = headingParent
+    while (container.parentElement && container.parentElement !== root) {
+      container = container.parentElement
+    }
+    let node = root.firstChild
+    while (node && node !== container) {
+      leadNodes.push(node)
+      node = node.nextSibling
+    }
+    if (container === headingParent) {
+      let inner: ChildNode | null = headingParent.firstChild
+      while (inner && inner !== firstHeading) {
+        leadNodes.push(inner)
+        inner = inner.nextSibling
+      }
+    }
+  }
+
+  if (leadNodes.length === 0) return
+
+  const lead = root.ownerDocument.createElement("div")
+  lead.className = "wiki-lead"
+  const copy = root.ownerDocument.createElement("div")
+  copy.className = "wiki-lead-copy"
+  root.insertBefore(lead, leadNodes[0])
+  for (const node of leadNodes) copy.appendChild(node)
+  for (const box of [...copy.querySelectorAll(".infobox")]) {
+    const frame = root.ownerDocument.createElement("div")
+    frame.className = "wiki-infobox-frame"
+    box.replaceWith(frame)
+    frame.appendChild(box)
+    lead.appendChild(frame)
+  }
+  if (copy.childNodes.length > 0) lead.insertBefore(copy, lead.firstChild)
+}
+
+function flattenTableCellBreaks(root: HTMLElement) {
+  root.querySelectorAll("table:not(.infobox) br").forEach((br) => {
+    if (br.closest(".infobox")) return
+    br.replaceWith(document.createTextNode(" "))
+  })
+}
+
+function cleanInfoboxPresentation(root: HTMLElement) {
+  root.querySelectorAll(".infobox, .infobox *").forEach((node) => {
+    if (!(node instanceof HTMLElement) || node instanceof HTMLImageElement) return
+    node.removeAttribute("bgcolor")
+    node.removeAttribute("background")
+  })
+}
+
+function markSectionFigures(root: HTMLElement) {
+  root.querySelectorAll("h2, h3, h4").forEach((heading) => {
+    if (heading.closest(".infobox, .navbox, .vertical-navbox, table")) return
+    let sibling = heading.nextElementSibling
+    while (sibling) {
+      if (sibling.matches("h2, h3, h4, p, ul, ol, dl, table")) break
+      if (
+        sibling instanceof HTMLElement &&
+        sibling.matches("figure") &&
+        !sibling.querySelector("audio")
+      ) {
+        sibling.classList.add("wiki-section-figure")
+      }
+      sibling = sibling.nextElementSibling
+    }
+  })
 }

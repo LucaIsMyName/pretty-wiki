@@ -22,6 +22,7 @@
 .wiki-article h2,
 .wiki-article h3,
 .wiki-article h4 {
+  clear: both;
   font-family: var(--font-heading);
   line-height: 1.25;
   scroll-margin-top: 6rem;
@@ -55,7 +56,27 @@
 
 .wiki-article ul,
 .wiki-article ol {
-  padding-inline-start: 1.4rem;
+  padding-inline-start: 1.5rem;
+}
+
+.wiki-article ul {
+  list-style: disc;
+}
+
+.wiki-article ul ul {
+  list-style: circle;
+}
+
+.wiki-article ol {
+  list-style: decimal;
+}
+
+.wiki-article ol ol {
+  list-style: lower-alpha;
+}
+
+.wiki-article li {
+  display: list-item;
 }
 
 .wiki-article li + li {
@@ -68,26 +89,142 @@
   height: auto;
 }
 
+.wiki-article .wiki-lead {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.wiki-article .wiki-lead-copy {
+  min-width: 0;
+  line-height: 1.7;
+}
+
+.wiki-article .wiki-lead-copy > :first-child {
+  margin-top: 0;
+}
+
+.wiki-article .wiki-lead .infobox {
+  float: none;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
 .wiki-article .infobox {
   float: inline-end;
   clear: inline-end;
-  width: min(100%, 20rem);
-  margin-inline-start: 1.5rem;
-  margin-bottom: 1rem;
+  width: min(100%, 22rem);
+  margin-block: 0.15rem 1.25rem;
+  margin-inline: 1.5rem 0;
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: 1.25rem;
   background: var(--card);
-  padding: 0.75rem;
+  padding: 0.9rem 0.85rem 0.35rem;
+  box-shadow: 0 1px 2px oklch(0.28 0.02 55 / 6%);
   font-family: var(--font-sans);
   font-size: 0.875rem;
-  line-height: 1.45;
+  line-height: 1.4;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .wiki-article .infobox caption,
-.wiki-article .infobox .infobox-title {
-  margin-bottom: 0.5rem;
+.wiki-article .infobox .infobox-title,
+.wiki-article .infobox .infobox-above {
+  caption-side: top;
+  padding: 0.1rem 0.4rem 0.75rem;
   font-family: var(--font-heading);
-  font-size: 1.15rem;
+  font-size: 1.45rem;
+  font-weight: 560;
+  line-height: 1.15;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.wiki-article .infobox .infobox-image,
+.wiki-article .infobox .infobox-full-data {
+  padding-bottom: 0.75rem;
+  text-align: center;
+}
+
+.wiki-article .wiki-infobox-gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem 0.45rem;
+}
+
+.wiki-article .wiki-infobox-photo {
+  margin: 0;
+  min-width: 0;
+}
+
+.wiki-article .wiki-infobox-photo:first-child {
+  grid-column: 1 / -1;
+}
+
+.wiki-article .infobox .infobox-full-data img {
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+  max-height: 7rem;
+  vertical-align: middle;
+}
+
+.wiki-article .wiki-infobox-photo img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: 5.5rem;
+  max-height: none;
+  margin-inline: auto;
+  border-radius: 0.7rem;
+  object-fit: cover;
+}
+
+.wiki-article .wiki-infobox-photo:first-child img {
+  height: 9.5rem;
+  object-fit: contain;
+  background: oklch(0.97 0.01 85);
+}
+
+.wiki-article .wiki-infobox-photo .infobox-caption,
+.wiki-article .wiki-infobox-photo figcaption {
+  margin-top: 0.2rem;
+  text-align: center;
+}
+
+.wiki-article .infobox ul,
+.wiki-article .infobox ol {
+  margin: 0;
+  padding-inline-start: 0;
+  list-style: none;
+}
+
+.wiki-article .infobox th,
+.wiki-article .infobox td {
+  background: transparent;
+  color: inherit;
+  text-align: start;
+}
+
+.wiki-article .infobox > tbody > tr > th:not([colspan]) {
+  width: 42%;
+  color: var(--muted-foreground);
+  font-weight: 600;
+  vertical-align: top;
+}
+
+.wiki-article .infobox .infobox-header,
+.wiki-article .infobox .infobox-subheader {
+  border-top: 1px solid var(--border);
+  padding-top: 0.85rem;
+  color: var(--foreground);
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 560;
+  text-align: center;
 }
 
 .wiki-article .thumb {
@@ -112,18 +249,95 @@
   font-size: 0.8rem;
 }
 
-.wiki-article .wikitable {
+.wiki-article figure.wiki-section-figure,
+.wiki-article figure.mw-halign-left {
+  float: inline-start;
+  clear: inline-start;
+  width: min(100%, 17.5rem);
+  margin-block: 0.35rem 0.85rem;
+  margin-inline: 0 1.35rem;
+}
+
+.wiki-article figure.wiki-section-figure img,
+.wiki-article figure.mw-halign-left img {
   display: block;
   width: 100%;
-  overflow-x: auto;
+  border-radius: 0.75rem;
+}
+
+.wiki-article table:not(.infobox) {
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  margin-inline: 0 !important;
+  float: none !important;
+  clear: none;
   border-collapse: collapse;
   font-family: var(--font-sans);
   font-size: 0.9rem;
   line-height: 1.4;
+  text-align: left !important;
 }
 
-.wiki-article .wikitable th,
-.wiki-article .wikitable td,
+.wiki-article table:not(.infobox) > caption,
+.wiki-article table:not(.infobox) > thead,
+.wiki-article table:not(.infobox) > tbody,
+.wiki-article table:not(.infobox) > tfoot {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+.wiki-article table:not(.infobox) tr {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  gap: 0.75rem;
+}
+
+.wiki-article table:not(.infobox) th,
+.wiki-article table:not(.infobox) td {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+  text-align: left !important;
+}
+
+.wiki-article table:not(.infobox) tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.wiki-article .infobox table {
+  display: table;
+  width: 100%;
+  float: none;
+  font-size: inherit;
+}
+
+.wiki-article .infobox table > caption,
+.wiki-article .infobox table > thead,
+.wiki-article .infobox table > tbody,
+.wiki-article .infobox table > tfoot,
+.wiki-article .infobox table tr {
+  display: table-row-group;
+}
+
+.wiki-article .infobox table tr {
+  display: table-row;
+}
+
+.wiki-article .infobox table th,
+.wiki-article .infobox table td {
+  display: table-cell;
+  flex: none;
+}
+
 .wiki-article .infobox th,
 .wiki-article .infobox td {
   border-bottom: 1px solid var(--border);
@@ -175,11 +389,48 @@
   font-size: 1rem;
 }
 
+@media (min-width: 800px) {
+  .wiki-article .wiki-lead:has(.infobox) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) min(24rem, 50%);
+    column-gap: 2rem;
+    align-items: start;
+  }
+
+  .wiki-article .wiki-lead > .wiki-infobox-frame {
+    position: sticky;
+    top: 5.5rem;
+    min-height: 0;
+    max-height: calc(100svh - 7rem);
+    overflow: auto;
+    align-self: start;
+  }
+}
+
 @media (max-width: 640px) {
   .wiki-article .infobox,
-  .wiki-article .thumb {
+  .wiki-article .thumb,
+  .wiki-article figure.wiki-section-figure,
+  .wiki-article figure.mw-halign-left {
     float: none;
     width: 100%;
-    margin-inline-start: 0;
+    margin-inline: 0;
   }
+}
+
+.box-More_citations_needed, .box-Multiple_issues, .box-Unreferenced_section {
+  display: none !important;
+}
+
+.wiki-article .wikitable {
+  font-size: 80% !important
+}
+
+.wiki-article .wiki-lead-copy figure {
+  display: none;
+}
+
+.wiki-article .wahldiagramm-wrapper {
+  position: relative;
+  display: none;
 }

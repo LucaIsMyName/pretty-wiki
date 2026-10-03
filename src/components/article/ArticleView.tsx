@@ -1,4 +1,5 @@
-import { useEffect, type MouseEvent } from "react"
+import { useEffect, useState, type MouseEvent } from "react"
+import { ChevronRightIcon } from "lucide-react"
 import { Link, useNavigate } from "react-router"
 import { LanguageMenu } from "@/components/language/LanguageMenu"
 import { Button } from "@/components/ui/button"
@@ -66,14 +67,14 @@ export function ArticleView({ article }: ArticleViewProps) {
             alt=""
             width={summary.thumbnail.width}
             height={summary.thumbnail.height}
-            className="mb-8 max-h-80 w-full rounded-2xl object-contain"
+            className="hidden mb-8 max-h-80 w-full rounded-2xl object-contain"
           />
         ) : null}
 
         {headings.length > 0 ? (
           <details className="mb-8 rounded-2xl border bg-card p-4 lg:hidden">
             <summary className="cursor-pointer font-medium">On this page</summary>
-            <HeadingList headings={headings} />
+            <ChapterNav headings={headings} />
           </details>
         ) : null}
 
@@ -101,11 +102,16 @@ export function ArticleView({ article }: ArticleViewProps) {
 
       {headings.length > 0 ? (
         <aside className="hidden lg:block">
-          <nav className="sticky top-24" aria-label="On this page">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          <nav
+            className="sticky top-24 flex max-h-[calc(100svh-7.5rem)] flex-col"
+            aria-label="On this page"
+          >
+            <p className="shrink-0 text-xs font-medium tracking-wide text-muted-foreground uppercase">
               On this page
             </p>
-            <HeadingList headings={headings} />
+            <div className="mt-3 overflow-y-auto pe-1">
+              <ChapterNav key={summary.title} headings={headings} />
+            </div>
           </nav>
         </aside>
       ) : null}
@@ -113,23 +119,83 @@ export function ArticleView({ article }: ArticleViewProps) {
   )
 }
 
-function HeadingList({
-  headings,
-}: {
-  headings: ArticleContent["headings"]
-}) {
+type Chapter = {
+  id: string
+  text: string
+  children: { id: string; text: string }[]
+}
+
+function groupChapters(headings: ArticleContent["headings"]) {
+  const chapters: Chapter[] = []
+  for (const heading of headings) {
+    const current = chapters[chapters.length - 1]
+    if (heading.level === 2 || !current) {
+      chapters.push({ id: heading.id, text: heading.text, children: [] })
+      continue
+    }
+    current.children.push({ id: heading.id, text: heading.text })
+  }
+  return chapters
+}
+
+function ChapterNav({ headings }: { headings: ArticleContent["headings"] }) {
+  const chapters = groupChapters(headings)
+  const [openId, setOpenId] = useState<string | null>(null)
+
   return (
-    <ul className="mt-3 space-y-1.5 text-sm">
-      {headings.map((heading) => (
-        <li key={heading.id} className={heading.level === 3 ? "ps-3" : undefined}>
-          <a
-            href={`#${heading.id}`}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            {heading.text}
-          </a>
-        </li>
-      ))}
+    <ul className="space-y-1 text-sm">
+      {chapters.map((chapter) => {
+        const open = openId === chapter.id
+        const hasChildren = chapter.children.length > 0
+        return (
+          <li key={chapter.id}>
+            <div className="grid grid-cols-[0.75rem_minmax(0,1fr)] items-start gap-x-1.5">
+              {hasChildren ? (
+                <button
+                  type="button"
+                  className="mt-1 flex size-3 items-center justify-center text-muted-foreground hover:text-foreground"
+                  aria-expanded={open}
+                  aria-label={open ? `Hide ${chapter.text}` : `Show ${chapter.text}`}
+                  onClick={() => setOpenId(open ? null : chapter.id)}
+                >
+                  <ChevronRightIcon
+                    className={
+                      open
+                        ? "size-3 rotate-90 transition-transform"
+                        : "size-3 transition-transform"
+                    }
+                  />
+                </button>
+              ) : (
+                <span className="size-3" />
+              )}
+              <a
+                href={`#${chapter.id}`}
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  if (hasChildren) setOpenId(chapter.id)
+                }}
+              >
+                {chapter.text}
+              </a>
+            </div>
+            {open ? (
+              <ul className="mt-1 space-y-1 ps-6">
+                {chapter.children.map((child) => (
+                  <li key={child.id}>
+                    <a
+                      href={`#${child.id}`}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      {child.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </li>
+        )
+      })}
     </ul>
   )
 }
